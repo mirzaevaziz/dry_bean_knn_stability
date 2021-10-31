@@ -22,17 +22,16 @@ def scale(dataFrame):
 def calculate_stability(ind, df, sidx, max_k):
     indexes = sidx[:, ind]
     indexes = np.delete(indexes, np.where(indexes == ind))
-
-    d = 0
-    last_crtit_obj_count = 0
-
-    for j in range(max_k):
-        if df.at[ind, "Class"] == df.at[indexes[j], "Class"]:
-            d = d + 1
-        if d / (j+1) > 1/2:
-            last_crtit_obj_count = (j+1)
-    print(f'\t Object {ind} = {last_crtit_obj_count / max_k}')
-    return last_crtit_obj_count / max_k
+    # https://stackoverflow.com/a/69782015/232017
+    # class objects count in neighbour
+    d = (df["Class"][ind] == df["Class"][indexes]).cumsum()
+    # neighbour count sequence
+    j = np.arange(1, len(d) + 1)
+    # get dominant neighbour count:
+    crit_objs = j[(d / j > 1 / 2)]
+    # calculate stability
+    result = crit_objs[-1] / max_k if len(crit_objs) else 0
+    return result
 
 
 df = pd.read_csv("Dry_Bean.txt", sep='\t')
@@ -63,6 +62,5 @@ sidx = np.argsort(dist_sq, axis=0)[:max_k+1, :]
 print('Finding stability of objects...')
 stability = [calculate_stability(x, df, sidx, max_k)
              for x in range(df.shape[0])]
-print(stability)
 np.savetxt("result_03_stability.txt", stability,
            delimiter='\t', fmt='%.6f')
